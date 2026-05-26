@@ -8,6 +8,13 @@ asarUnpack:
   - "node_modules/node-pty/**"
   - "node_modules/@serialport/**"
 
+# Откуда брать обновления — GitHub Releases
+publish:
+  provider: github
+  owner: higroupkz-bot
+  repo: remote-access
+  releaseType: release
+
 directories:
   output: dist
   buildResources: build

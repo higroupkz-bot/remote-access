@@ -8,9 +8,10 @@ import {
   session
 } from 'electron'
 import { join } from 'path'
-import { existsSync, readdirSync, statSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
+import { existsSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs'
 import os from 'os'
 import crypto from 'crypto'
+import { autoUpdater } from 'electron-updater'
 
 // Lazy-load native modules (need electron-rebuild after npm install)
 let robot: typeof import('@jitsi/robotjs') | null = null
@@ -85,7 +86,40 @@ app.whenReady().then(async () => {
     }
   }
 
-  createWindow()
+  const win = createWindow()
+
+  // ── Автообновление ──────────────────────────────────────────────────────
+  // Только в продакшне (в dev-режиме не проверяем)
+  if (!process.env['ELECTRON_RENDERER_URL']) {
+    autoUpdater.autoDownload = true
+    autoUpdater.autoInstallOnAppQuit = true
+
+    autoUpdater.on('update-available', () => {
+      dialog.showMessageBox(win, {
+        type: 'info',
+        title: 'Доступно обновление',
+        message: 'Найдена новая версия Remote Access.',
+        detail: 'Обновление скачивается в фоне и установится при следующем закрытии приложения.',
+        buttons: ['OK']
+      })
+    })
+
+    autoUpdater.on('update-downloaded', () => {
+      dialog.showMessageBox(win, {
+        type: 'info',
+        title: 'Обновление готово',
+        message: 'Обновление скачано.',
+        detail: 'Нажми "Перезапустить", чтобы установить сейчас.',
+        buttons: ['Перезапустить', 'Позже']
+      }).then(({ response }) => {
+        if (response === 0) autoUpdater.quitAndInstall()
+      })
+    })
+
+    // Проверять при запуске и каждые 4 часа
+    autoUpdater.checkForUpdates().catch(() => {})
+    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000)
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

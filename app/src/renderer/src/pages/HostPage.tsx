@@ -164,7 +164,8 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
       const screen = sources.find(s => s.name === 'Entire Screen' || s.name === 'Screen 1') ?? sources[0]
       if (!screen) { setError('Источник экрана не найден'); return }
 
-      const stream = await (navigator.mediaDevices as unknown as {
+      // Захват видео экрана
+      const videoStream = await (navigator.mediaDevices as unknown as {
         getUserMedia: (c: unknown) => Promise<MediaStream>
       }).getUserMedia({
         audio: false,
@@ -178,6 +179,25 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
           }
         }
       })
+
+      // Захват системного звука (работает на Windows; на macOS — только с доп. ПО)
+      let audioStream: MediaStream | null = null
+      try {
+        audioStream = await (navigator.mediaDevices as unknown as {
+          getUserMedia: (c: unknown) => Promise<MediaStream>
+        }).getUserMedia({
+          audio: { mandatory: { chromeMediaSource: 'desktop' } } as unknown,
+          video: false as unknown
+        })
+      } catch {
+        // Звук недоступен — продолжаем без него
+      }
+
+      const tracks = [
+        ...videoStream.getVideoTracks(),
+        ...(audioStream?.getAudioTracks() ?? [])
+      ]
+      const stream = new MediaStream(tracks)
       streamRef.current = stream
 
       await peer.addStream(stream)

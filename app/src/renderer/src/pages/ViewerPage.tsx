@@ -253,20 +253,33 @@ export default function ViewerPage({ code, signalingUrl, onExit }: Props) {
 
   // ── Keyboard forwarding ───────────────────────────────────────────────────
   useEffect(() => {
-    if (panel !== 'none') return // terminal handles its own keyboard
+    if (panel !== 'none') return
     const handler = (e: KeyboardEvent) => {
       if (connState !== 'active') return
-      // Don't steal Cmd/Ctrl+W etc
-      if (e.key === 'F5' || (e.metaKey && e.key === 'r')) return
+      // Разрешить только Cmd+Tab (переключение окон) и Cmd+Q (выход)
+      if ((e.metaKey && e.key === 'Tab') || (e.metaKey && e.key === 'q')) return
 
-      const key = toRobotKey(e.key)
-      if (!key) return
       e.preventDefault()
+      e.stopPropagation()
+
       const mods = toRobotModifiers(e)
-      peerRef.current?.send({ type: 'input-key', key, modifiers: mods })
+      const hasModifier = e.ctrlKey || e.metaKey || e.altKey
+
+      // Printable chars без модификаторов (работает с любой раскладкой: Latin, Кириллица, etc.)
+      if (!hasModifier && e.key.length === 1) {
+        peerRef.current?.send({ type: 'input-type', text: e.key })
+        return
+      }
+
+      // Спецклавиши и шорткаты (Ctrl+C, Cmd+V, Enter, стрелки...)
+      const key = toRobotKey(e.key)
+      if (key) {
+        peerRef.current?.send({ type: 'input-key', key, modifiers: mods })
+      }
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    // capture: true — перехватываем до того как Electron обработает
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
   }, [connState, panel])
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -287,7 +300,6 @@ export default function ViewerPage({ code, signalingUrl, onExit }: Props) {
       <video
         ref={videoRef}
         id="remote-video"
-        muted
         autoPlay
         onMouseMove={onMouseMove}
         onMouseDown={onMouseDown}
@@ -325,14 +337,14 @@ export default function ViewerPage({ code, signalingUrl, onExit }: Props) {
         </div>
       )}
 
-      {/* Floating toolbar */}
+      {/* Floating toolbar — pointer-events-none на фоне, чтобы мышь проходила насквозь к видео */}
       <div
         className={`absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2
-          bg-gradient-to-b from-black/60 to-transparent transition-opacity duration-300
-          ${showToolbar || panel !== 'none' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          bg-gradient-to-b from-black/60 to-transparent transition-opacity duration-300 pointer-events-none
+          ${showToolbar || panel !== 'none' ? 'opacity-100' : 'opacity-0'}`}
       >
-        <div className="drag-region flex-1 h-8" />
-        <div className="no-drag flex items-center gap-2">
+        <div className="flex-1 h-8" />
+        <div className="no-drag flex items-center gap-2 pointer-events-auto">
           <ToolBtn
             active={panel === 'terminal'}
             onClick={() => setPanel(p => p === 'terminal' ? 'none' : 'terminal')}

@@ -94,26 +94,40 @@ app.whenReady().then(async () => {
     autoUpdater.autoDownload = true
     autoUpdater.autoInstallOnAppQuit = true
 
-    autoUpdater.on('update-available', () => {
+    autoUpdater.on('update-available', (info) => {
       dialog.showMessageBox(win, {
         type: 'info',
         title: 'Доступно обновление',
-        message: 'Найдена новая версия Remote Access.',
-        detail: 'Обновление скачивается в фоне и установится при следующем закрытии приложения.',
+        message: `Найдена версия ${info.version}`,
+        detail: 'Скачивается в фоне. Когда будет готово — появится кнопка "Перезапустить".',
         buttons: ['OK']
       })
     })
 
-    autoUpdater.on('update-downloaded', () => {
+    autoUpdater.on('download-progress', (p) => {
+      const pct = Math.round(p.percent)
+      win.setProgressBar(p.percent / 100)
+      win.setTitle(`Remote Access — скачивание обновления ${pct}%`)
+    })
+
+    autoUpdater.on('update-downloaded', (info) => {
+      win.setProgressBar(-1)
+      win.setTitle('Remote Access')
       dialog.showMessageBox(win, {
         type: 'info',
         title: 'Обновление готово',
-        message: 'Обновление скачано.',
-        detail: 'Нажми "Перезапустить", чтобы установить сейчас.',
-        buttons: ['Перезапустить', 'Позже']
+        message: `Версия ${info.version} скачана`,
+        detail: 'Нажми "Перезапустить" чтобы установить сейчас, или закрой приложение позже.',
+        buttons: ['Перезапустить сейчас', 'Позже']
       }).then(({ response }) => {
         if (response === 0) autoUpdater.quitAndInstall()
       })
+    })
+
+    autoUpdater.on('error', (err) => {
+      win.setProgressBar(-1)
+      win.setTitle('Remote Access')
+      console.error('Auto-update error:', err.message)
     })
 
     // Проверять при запуске и каждые 4 часа

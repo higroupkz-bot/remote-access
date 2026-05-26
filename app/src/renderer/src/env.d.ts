@@ -26,6 +26,7 @@ interface ElectronAPI {
   openSaveDialog: (name: string) => Promise<string | null>
   openFileDialog: () => Promise<string | null>
   getVersion: () => Promise<string>
+  copyText: (text: string) => Promise<void>
   platform: string
 }
 

@@ -50,6 +50,7 @@ nsis:
   oneClick: true
   perMachine: false
   deleteAppDataOnUninstall: false
+  artifactName: "${productName}-Setup-${version}.exe"
 
 # ── Linux ────────────────────────────────────────────────────────────────────
 linux:

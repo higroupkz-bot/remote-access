@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('api', {
   openSaveDialog: (name: string) => ipcRenderer.invoke('open-save-dialog', name),
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
   getVersion: () => ipcRenderer.invoke('get-version'),
+  copyText: (text: string) => ipcRenderer.invoke('copy-text', text),
 
   // ── Platform info ────────────────────────────────────────
   platform: process.platform as string

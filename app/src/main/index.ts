@@ -5,7 +5,8 @@ import {
   desktopCapturer,
   systemPreferences,
   dialog,
-  session
+  session,
+  clipboard
 } from 'electron'
 import { join } from 'path'
 import { existsSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs'
@@ -205,6 +206,7 @@ ipcMain.handle('get-screen-size', () => {
 
 ipcMain.handle('input-available', () => robot !== null)
 ipcMain.handle('get-version', () => app.getVersion())
+ipcMain.handle('copy-text', (_e, text: string) => clipboard.writeText(text))
 
 // ─── IPC: Terminal (node-pty) ─────────────────────────────────────────────────
 

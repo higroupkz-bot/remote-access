@@ -227,7 +227,7 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
   }, [signalingUrl, handleDataMsg])
 
   const copyCode = () => {
-    navigator.clipboard.writeText(code)
+    window.api.copyText(code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

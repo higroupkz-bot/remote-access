@@ -139,11 +139,9 @@ export default function HomePage({ onNavigate }: Props) {
       </div>
 
       {/* Version badge at the bottom */}
-      {version && (
-        <div className="pb-4 text-center">
-          <span className="text-xs text-neutral-700">v{version}</span>
-        </div>
-      )}
+      <div className="pb-5 text-center">
+        <span className="text-xs text-neutral-500">{version ? `v${version}` : ''}</span>
+      </div>
     </div>
   )
 }

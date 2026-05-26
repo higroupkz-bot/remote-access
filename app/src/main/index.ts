@@ -52,7 +52,7 @@ function createWindow(): BrowserWindow {
 
   // Allow screen capture via getUserMedia
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'media') callback(true)
+    if (permission === 'media' || permission === 'display-capture') callback(true)
     else callback(false)
   })
 

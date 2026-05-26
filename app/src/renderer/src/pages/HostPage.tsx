@@ -149,63 +149,75 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
 
     // 2. Viewer joined → start WebRTC
     sig.on('viewer-joined', async () => {
-      setStatus('active')
-
       const peer = new RemotePeer(sig, true, {
-        onConnected: () => console.log('WebRTC connected'),
-        onDisconnected: () => setStatus('waiting'),
+        onConnected: () => setStatus('active'),
+        onDisconnected: () => {
+          setStatus('waiting')
+          streamRef.current?.getTracks().forEach(t => t.stop())
+          streamRef.current = null
+        },
         onError: e => setError(e),
         onDataMessage: handleDataMsg
       })
       peerRef.current = peer
 
-      // Get screen source
-      const sources = await window.api.getScreenSources()
-      const screen = sources.find(s => s.name === 'Entire Screen' || s.name === 'Screen 1') ?? sources[0]
-      if (!screen) { setError('Источник экрана не найден'); return }
-
-      // Захват видео экрана
-      const videoStream = await (navigator.mediaDevices as unknown as {
-        getUserMedia: (c: unknown) => Promise<MediaStream>
-      }).getUserMedia({
-        audio: false,
-        video: {
-          mandatory: {
-            chromeMediaSource: 'desktop',
-            chromeMediaSourceId: screen.id,
-            maxWidth: 1920,
-            maxHeight: 1080,
-            maxFrameRate: 30
-          }
-        }
-      })
-
-      // Захват системного звука (работает на Windows; на macOS — только с доп. ПО)
-      let audioStream: MediaStream | null = null
       try {
-        audioStream = await (navigator.mediaDevices as unknown as {
+        // Get screen source — prefer sources with id starting with 'screen:'
+        const sources = await window.api.getScreenSources()
+        const screen = sources.find(s => s.id.startsWith('screen:')) ?? sources[0]
+        if (!screen) { setError('Источник экрана не найден'); peer.close(); return }
+
+        // Захват видео экрана
+        const videoStream = await (navigator.mediaDevices as unknown as {
           getUserMedia: (c: unknown) => Promise<MediaStream>
         }).getUserMedia({
-          audio: { mandatory: { chromeMediaSource: 'desktop' } } as unknown,
-          video: false as unknown
+          audio: false,
+          video: {
+            mandatory: {
+              chromeMediaSource: 'desktop',
+              chromeMediaSourceId: screen.id,
+              maxWidth: 1920,
+              maxHeight: 1080,
+              maxFrameRate: 30
+            }
+          }
         })
-      } catch {
-        // Звук недоступен — продолжаем без него
+
+        // Захват системного звука (работает на Windows; на macOS — только с доп. ПО)
+        let audioStream: MediaStream | null = null
+        try {
+          audioStream = await (navigator.mediaDevices as unknown as {
+            getUserMedia: (c: unknown) => Promise<MediaStream>
+          }).getUserMedia({
+            audio: { mandatory: { chromeMediaSource: 'desktop' } } as unknown,
+            video: false as unknown
+          })
+        } catch {
+          // Звук недоступен — продолжаем без него
+        }
+
+        const tracks = [
+          ...videoStream.getVideoTracks(),
+          ...(audioStream?.getAudioTracks() ?? [])
+        ]
+        const stream = new MediaStream(tracks)
+        streamRef.current = stream
+
+        await peer.addStream(stream)
+        await peer.makeOffer()
+
+        // Send screen size
+        const size = await window.api.getScreenSize()
+        peer.send({ type: 'screen-size', width: size.width, height: size.height })
+
+        setStatus('active')
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setError(`Не удалось захватить экран: ${msg}`)
+        setStatus('error')
+        peer.close()
+        peerRef.current = null
       }
-
-      const tracks = [
-        ...videoStream.getVideoTracks(),
-        ...(audioStream?.getAudioTracks() ?? [])
-      ]
-      const stream = new MediaStream(tracks)
-      streamRef.current = stream
-
-      await peer.addStream(stream)
-      await peer.makeOffer()
-
-      // Send screen size
-      const size = await window.api.getScreenSize()
-      peer.send({ type: 'screen-size', width: size.width, height: size.height })
     })
 
     sig.on('disconnected', () => {

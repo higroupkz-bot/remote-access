@@ -128,6 +128,13 @@ app.whenReady().then(async () => {
       win.setProgressBar(-1)
       win.setTitle('Remote Access')
       console.error('Auto-update error:', err.message)
+      dialog.showMessageBox(win, {
+        type: 'warning',
+        title: 'Ошибка обновления',
+        message: 'Не удалось скачать обновление автоматически.',
+        detail: `Скачай вручную: github.com/higroupkz-bot/remote-access/releases/latest\n\nОшибка: ${err.message}`,
+        buttons: ['OK']
+      })
     })
 
     // Проверять при запуске и каждые 4 часа

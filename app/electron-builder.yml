@@ -1,5 +1,5 @@
 appId: com.remoteaccess.app
-productName: Remote Access
+productName: RemoteAccess
 copyright: Copyright © 2026
 
 # Распаковать нативные модули из asar (нужно для robotjs и node-pty)

@@ -25,6 +25,7 @@ interface ElectronAPI {
   ensureDir: (path: string) => Promise<void>
   openSaveDialog: (name: string) => Promise<string | null>
   openFileDialog: () => Promise<string | null>
+  getVersion: () => Promise<string>
   platform: string
 }
 

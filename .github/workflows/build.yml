@@ -17,20 +17,14 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
-
-      - name: Install & build
+      - name: Build & publish
         working-directory: app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm ci
-          npm run dist:mac
-
-      - name: Upload DMGs
-        uses: actions/upload-artifact@v4
-        with:
-          name: mac-dmg
-          path: app/dist/*.dmg
+          npx electron-vite build
+          npx electron-builder --mac --publish always
 
   build-windows:
     runs-on: windows-latest
@@ -43,20 +37,14 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
-
-      - name: Install & build
+      - name: Build & publish
         working-directory: app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm ci
-          npm run dist:win
-
-      - name: Upload EXE
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer
-          path: app/dist/*.exe
+          npx electron-vite build
+          npx electron-builder --win --publish always
 
   build-linux:
     runs-on: ubuntu-latest
@@ -69,38 +57,13 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
-
-      - name: Install dependencies
+      - name: Install system deps
         run: sudo apt-get install -y libxtst-dev libpng-dev
-
-      - name: Install & build
+      - name: Build & publish
         working-directory: app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm ci
-          npm run dist:linux
-
-      - name: Upload AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-appimage
-          path: app/dist/*.AppImage
-
-  # Создать GitHub Release — electron-updater будет брать обновления отсюда
-  release:
-    needs: [build-mac, build-windows, build-linux]
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          generate_release_notes: true
+          npx electron-vite build
+          npx electron-builder --linux --publish always

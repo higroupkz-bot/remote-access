@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld('api', {
   ensureDir: (path: string) => ipcRenderer.invoke('ensure-dir', path),
   openSaveDialog: (name: string) => ipcRenderer.invoke('open-save-dialog', name),
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
+  getVersion: () => ipcRenderer.invoke('get-version'),
 
   // ── Platform info ────────────────────────────────────────
   platform: process.platform as string

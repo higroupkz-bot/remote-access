@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Page } from '../App'
 
 const DEFAULT_SERVER = 'wss://server-any-production.up.railway.app'
@@ -12,6 +12,11 @@ export default function HomePage({ onNavigate }: Props) {
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [tab, setTab] = useState<'host' | 'connect'>('host')
+  const [version, setVersion] = useState('')
+
+  useEffect(() => {
+    window.api.getVersion().then(setVersion)
+  }, [])
 
   const handleConnect = () => {
     const code = codeInput.trim().toUpperCase()
@@ -132,6 +137,13 @@ export default function HomePage({ onNavigate }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Version badge at the bottom */}
+      {version && (
+        <div className="pb-4 text-center">
+          <span className="text-xs text-neutral-700">v{version}</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -183,6 +183,7 @@ ipcMain.handle('get-screen-size', () => {
 })
 
 ipcMain.handle('input-available', () => robot !== null)
+ipcMain.handle('get-version', () => app.getVersion())
 
 // ─── IPC: Terminal (node-pty) ─────────────────────────────────────────────────
 

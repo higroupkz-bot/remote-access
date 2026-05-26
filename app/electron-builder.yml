@@ -1,0 +1,52 @@
+appId: com.remoteaccess.app
+productName: Remote Access
+copyright: Copyright © 2026
+
+# Распаковать нативные модули из asar (нужно для robotjs и node-pty)
+asarUnpack:
+  - "node_modules/@jitsi/robotjs/**"
+  - "node_modules/node-pty/**"
+  - "node_modules/@serialport/**"
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**/*
+  - node_modules/**/*
+  - package.json
+
+# ── macOS ────────────────────────────────────────────────────────────────────
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]   # Intel + Apple Silicon
+  category: public.app-category.utilities
+  # Без подписи — для личного использования этого достаточно
+  identity: null
+
+dmg:
+  title: Remote Access
+  window:
+    width: 540
+    height: 380
+
+# ── Windows ──────────────────────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+
+nsis:
+  oneClick: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
+
+# ── Linux ────────────────────────────────────────────────────────────────────
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  category: Utility

@@ -1,0 +1,15 @@
+{
+  "name": "remote-access",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "server": "cd server && npm run dev",
+    "app": "cd app && npm run dev",
+    "install:all": "cd server && npm install && cd ../app && npm install",
+    "dev": "concurrently \"npm run server\" \"npm run app\"",
+    "setup": "npm run install:all && cd app && npm run rebuild"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

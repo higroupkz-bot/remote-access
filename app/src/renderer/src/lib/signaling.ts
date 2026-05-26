@@ -19,9 +19,17 @@ export class SignalingClient {
   private queue: object[] = []
   private _connected = false
   private pingTimer?: ReturnType<typeof setInterval>
+  private openPromise: Promise<void>
 
   constructor(url: string) {
     this.ws = new WebSocket(url)
+
+    // openPromise resolves when connected — waitForOpen() uses this,
+    // so it never overwrites onopen and the queue flush always runs.
+    this.openPromise = new Promise((resolve, reject) => {
+      this.ws.addEventListener('open', () => resolve(), { once: true })
+      this.ws.addEventListener('error', () => reject(new Error('Connection failed')), { once: true })
+    })
 
     this.ws.onopen = () => {
       this._connected = true
@@ -71,11 +79,7 @@ export class SignalingClient {
   }
 
   waitForOpen(): Promise<void> {
-    if (this._connected) return Promise.resolve()
-    return new Promise((resolve, reject) => {
-      this.ws.onopen = () => { this._connected = true; resolve() }
-      this.ws.onerror = () => reject(new Error('Connection failed'))
-    })
+    return this.openPromise
   }
 
   get connected() { return this._connected }

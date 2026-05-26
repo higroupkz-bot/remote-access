@@ -118,27 +118,34 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
   }, [termOk])
 
   useEffect(() => {
-    // Fetch ICE config from signaling server (may include private TURN)
     const httpUrl = signalingUrl.replace(/^ws/, 'http')
-    fetch(`${httpUrl}/ice-servers`)
-      .then(r => r.json())
-      .then(setIceServers)
-      .catch(() => { /* use defaults */ })
+    fetch(`${httpUrl}/ice-servers`).then(r => r.json()).then(setIceServers).catch(() => {})
 
     const sig = new SignalingClient(signalingUrl)
     sigRef.current = sig
 
-    sig.waitForOpen().catch(err => {
-      setError(`Не удалось подключиться к серверу: ${err.message}`)
-      setStatus('error')
-    })
+    // Timeout: если за 8 секунд код не пришёл — показать ошибку
+    const timeout = setTimeout(() => {
+      if (status === 'connecting') {
+        setError('Сервер не отвечает. Проверь адрес в настройках.')
+        setStatus('error')
+      }
+    }, 8000)
 
-    // 1. Register as host → receive session code
+    sig.waitForOpen()
+      .then(() => sig.send({ type: 'host' }))
+      .catch(err => {
+        clearTimeout(timeout)
+        setError(`Не удалось подключиться: ${err.message}`)
+        setStatus('error')
+      })
+
+    // Receive session code from server
     sig.on('code', ({ code }) => {
+      clearTimeout(timeout)
       setCode(code)
       setStatus('waiting')
     })
-    sig.send({ type: 'host' })
 
     // 2. Viewer joined → start WebRTC
     sig.on('viewer-joined', async () => {

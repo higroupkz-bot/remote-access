@@ -160,10 +160,8 @@ export default function ViewerPage({ code, signalingUrl, onExit }: Props) {
 
     sig.on('joined', () => {
       streamTimeout = setTimeout(() => {
-        if (connState !== 'active') {
-          setErrorMsg('Хост не отвечает — не удалось установить соединение')
-          setConnState('disconnected')
-        }
+        setErrorMsg('Хост не отвечает — не удалось получить видеопоток')
+        setConnState('disconnected')
       }, 30_000)
 
       const peer = new RemotePeer(sig, false, {
@@ -176,8 +174,7 @@ export default function ViewerPage({ code, signalingUrl, onExit }: Props) {
           setConnState('active')
         },
         onConnected: () => {
-          if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null }
-          setConnState('active')
+          // ICE connected — wait for video track via onRemoteStream before activating
         },
         onDisconnected: () => setConnState('disconnected'),
         onError: (e) => { setErrorMsg(e); setConnState('error') },

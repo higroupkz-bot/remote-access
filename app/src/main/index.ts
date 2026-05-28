@@ -15,6 +15,10 @@ import os from 'os'
 import crypto from 'crypto'
 import { autoUpdater } from 'electron-updater'
 
+// Disable GPU memory buffer for video frames — prevents renderer crash on Windows
+// during screen capture via getUserMedia with chromeMediaSource:'desktop'
+app.commandLine.appendSwitch('disable-features', 'GpuMemoryBufferVideoFrames')
+
 // Simple file logger for auto-updater diagnostics
 let _logPath = ''
 function updLog(msg: string) {
@@ -77,6 +81,11 @@ function createWindow(): BrowserWindow {
   // F12 opens DevTools for diagnostics
   win.webContents.on('before-input-event', (_e, input) => {
     if (input.key === 'F12') win.webContents.openDevTools()
+  })
+
+  // Log renderer crashes for diagnostics
+  win.webContents.on('render-process-gone', (_e, details) => {
+    updLog(`Renderer crash: reason=${details.reason} exitCode=${details.exitCode}`)
   })
 
   return win

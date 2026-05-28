@@ -194,10 +194,7 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
           video: {
             mandatory: {
               chromeMediaSource: 'desktop',
-              chromeMediaSourceId: screen.id,
-              maxWidth: 1920,
-              maxHeight: 1080,
-              maxFrameRate: 30
+              chromeMediaSourceId: screen.id
             }
           }
         })

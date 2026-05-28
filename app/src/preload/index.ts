@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld('api', {
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
   getVersion: () => ipcRenderer.invoke('get-version'),
   copyText: (text: string) => ipcRenderer.invoke('copy-text', text),
+  checkScreenPermission: () => ipcRenderer.invoke('check-screen-permission'),
+  openScreenPermission: () => ipcRenderer.invoke('open-screen-permission'),
 
   // ── Platform info ────────────────────────────────────────
   platform: process.platform as string

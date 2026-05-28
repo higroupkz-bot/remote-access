@@ -27,6 +27,8 @@ interface ElectronAPI {
   openFileDialog: () => Promise<string | null>
   getVersion: () => Promise<string>
   copyText: (text: string) => Promise<void>
+  checkScreenPermission: () => Promise<string>
+  openScreenPermission: () => Promise<void>
   platform: string
 }
 

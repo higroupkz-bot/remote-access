@@ -13,6 +13,7 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
   const [status, setStatus] = useState<Status>('connecting')
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
+  const [permError, setPermError] = useState(false)
   const [copied, setCopied] = useState(false)
   const [inputOk, setInputOk] = useState(false)
   const [termOk, setTermOk] = useState(false)
@@ -162,6 +163,18 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
       peerRef.current = peer
 
       try {
+        // macOS: check screen recording permission
+        const perm = await window.api.checkScreenPermission()
+        if (perm !== 'granted') {
+          setError('Нет разрешения на запись экрана.')
+          setPermError(true)
+          setStatus('error')
+          peer.close()
+          peerRef.current = null
+          window.api.openScreenPermission()
+          return
+        }
+
         // Get screen source — prefer sources with id starting with 'screen:'
         const sources = await window.api.getScreenSources()
         const screen = sources.find(s => s.id.startsWith('screen:')) ?? sources[0]
@@ -272,7 +285,19 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
               {status === 'connecting' && 'Подключение к серверу...'}
               {status === 'waiting' && 'Ожидание подключения...'}
               {status === 'active' && 'Активная сессия'}
-              {status === 'error' && error}
+              {status === 'error' && (
+                <span className="flex flex-col items-center gap-2">
+                  <span>{error}</span>
+                  {permError && (
+                    <button
+                      onClick={() => window.api.openScreenPermission()}
+                      className="text-xs bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Открыть Системные настройки
+                    </button>
+                  )}
+                </span>
+              )}
             </span>
           </div>
 

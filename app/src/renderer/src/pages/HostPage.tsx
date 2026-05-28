@@ -181,33 +181,22 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
           return
         }
 
-        // Get screen source — prefer sources with id starting with 'screen:'
-        const sources = await window.api.getScreenSources()
-        const screen = sources.find(s => s.id.startsWith('screen:')) ?? sources[0]
-        if (!screen) { setError('Источник экрана не найден'); peer.close(); return }
-
-        // Захват видео экрана
-        const videoStream = await (navigator.mediaDevices as unknown as {
-          getUserMedia: (c: unknown) => Promise<MediaStream>
-        }).getUserMedia({
-          audio: false,
-          video: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: screen.id
-            }
-          }
+        // Modern screen capture via getDisplayMedia (Electron v26+)
+        // Main process intercepts this via setDisplayMediaRequestHandler
+        // and picks the primary screen automatically — no picker shown
+        const videoStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false
         })
 
-        // Захват системного звука (работает на Windows; на macOS — только с доп. ПО)
+        // Захват системного звука отдельным треком (из videoStream если loopback включён)
         let audioStream: MediaStream | null = null
         try {
-          audioStream = await (navigator.mediaDevices as unknown as {
-            getUserMedia: (c: unknown) => Promise<MediaStream>
-          }).getUserMedia({
-            audio: { mandatory: { chromeMediaSource: 'desktop' } } as unknown,
-            video: false as unknown
-          })
+          const audioTracks = videoStream.getAudioTracks()
+          if (audioTracks.length > 0) {
+            audioStream = new MediaStream(audioTracks)
+            audioTracks.forEach(t => videoStream.removeTrack(t))
+          }
         } catch {
           // Звук недоступен — продолжаем без него
         }

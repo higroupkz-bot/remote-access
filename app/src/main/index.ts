@@ -66,11 +66,24 @@ function createWindow(): BrowserWindow {
     }
   })
 
-  // Allow screen capture via getUserMedia
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+  // Allow screen capture permissions
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
     if (permission === 'media' || permission === 'display-capture') callback(true)
     else callback(false)
   })
+
+  // Modern screen capture handler (Electron v26+) — intercepts getDisplayMedia()
+  // Much more stable than the deprecated getUserMedia({chromeMediaSource:'desktop'})
+  session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+    desktopCapturer.getSources({ types: ['screen'] }).then(sources => {
+      const screen = sources.find(s => s.id.startsWith('screen:')) ?? sources[0]
+      if (screen) {
+        callback({ video: screen, audio: 'loopback' })
+      } else {
+        callback({})
+      }
+    }).catch(() => callback({}))
+  }, { useSystemPicker: false })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])

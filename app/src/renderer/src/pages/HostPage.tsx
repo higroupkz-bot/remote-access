@@ -130,13 +130,14 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
     const sig = new SignalingClient(signalingUrl)
     sigRef.current = sig
 
-    // Timeout: если за 8 секунд код не пришёл — показать ошибку
+    // Timeout: если за 15 секунд код не пришёл — показать ошибку
+    let gotCode = false
     const timeout = setTimeout(() => {
-      if (status === 'connecting') {
-        setError('Сервер не отвечает. Проверь адрес в настройках.')
+      if (!gotCode) {
+        setError('Сервер не отвечает. Проверь интернет и адрес в настройках.')
         setStatus('error')
       }
-    }, 8000)
+    }, 15000)
 
     sig.waitForOpen()
       .then(() => sig.send({ type: 'host' }))
@@ -148,6 +149,7 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
 
     // Receive session code from server
     sig.on('code', ({ code }) => {
+      gotCode = true
       clearTimeout(timeout)
       setCode(code)
       setStatus('waiting')
@@ -282,31 +284,39 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
         <div className="w-full max-w-sm space-y-6">
 
           {/* Status indicator */}
-          <div className="flex items-center justify-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${
-              status === 'active' ? 'bg-emerald-500 animate-pulse' :
-              status === 'waiting' ? 'bg-yellow-500 animate-pulse' :
-              status === 'error' ? 'bg-red-500' : 'bg-neutral-600 animate-pulse'
-            }`} />
-            <span className="text-sm text-neutral-400">
-              {status === 'connecting' && 'Подключение к серверу...'}
-              {status === 'waiting' && 'Ожидание подключения...'}
-              {status === 'active' && 'Активная сессия'}
-              {status === 'error' && (
-                <span className="flex flex-col items-center gap-2">
-                  <span>{error}</span>
-                  {permError && (
-                    <button
-                      onClick={() => window.api.openScreenPermission()}
-                      className="text-xs bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Открыть Системные настройки
-                    </button>
-                  )}
-                </span>
+          {status === 'error' ? (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-center space-y-3">
+              <p className="text-red-400 text-sm font-medium">Ошибка подключения</p>
+              <p className="text-red-300/80 text-xs break-words">{error}</p>
+              {permError && (
+                <button
+                  onClick={() => window.api.openScreenPermission()}
+                  className="text-xs bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Открыть Системные настройки
+                </button>
               )}
-            </span>
-          </div>
+              <button
+                onClick={onExit}
+                className="block w-full text-xs text-neutral-500 hover:text-neutral-300 transition-colors pt-1"
+              >
+                ← Назад
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${
+                status === 'active' ? 'bg-emerald-500 animate-pulse' :
+                status === 'waiting' ? 'bg-yellow-500 animate-pulse' :
+                'bg-neutral-600 animate-pulse'
+              }`} />
+              <span className="text-sm text-neutral-400">
+                {status === 'connecting' && 'Подключение к серверу...'}
+                {status === 'waiting' && 'Ожидание подключения...'}
+                {status === 'active' && 'Активная сессия'}
+              </span>
+            </div>
+          )}
 
           {/* Session code */}
           {code && (

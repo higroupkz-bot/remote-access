@@ -63,6 +63,11 @@ function createWindow(): BrowserWindow {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  // F12 opens DevTools for diagnostics
+  win.webContents.on('before-input-event', (_e, input) => {
+    if (input.key === 'F12') win.webContents.openDevTools()
+  })
+
   return win
 }
 

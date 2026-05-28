@@ -10,10 +10,21 @@ import {
   shell
 } from 'electron'
 import { join } from 'path'
-import { existsSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs'
+import { existsSync, readdirSync, statSync, writeFileSync, mkdirSync, appendFileSync } from 'fs'
 import os from 'os'
 import crypto from 'crypto'
 import { autoUpdater } from 'electron-updater'
+
+// Simple file logger for auto-updater diagnostics
+let _logPath = ''
+function updLog(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`
+  console.log('[updater]', msg)
+  try {
+    if (!_logPath) _logPath = join(app.getPath('userData'), 'updater.log')
+    appendFileSync(_logPath, line)
+  } catch { /* ignore */ }
+}
 
 // Lazy-load native modules (need electron-rebuild after npm install)
 let robot: typeof import('@jitsi/robotjs') | null = null
@@ -100,8 +111,16 @@ app.whenReady().then(async () => {
   if (!process.env['ELECTRON_RENDERER_URL']) {
     autoUpdater.autoDownload = true
     autoUpdater.autoInstallOnAppQuit = true
+    autoUpdater.allowPrerelease = false
+
+    autoUpdater.on('checking-for-update', () => {
+      updLog(`Checking for update (current: ${app.getVersion()})`)
+      win.webContents.send('update-status', { type: 'checking' })
+    })
 
     autoUpdater.on('update-available', (info) => {
+      updLog(`Update available: ${info.version}`)
+      win.webContents.send('update-status', { type: 'available', version: info.version })
       dialog.showMessageBox(win, {
         type: 'info',
         title: 'Доступно обновление',
@@ -111,8 +130,14 @@ app.whenReady().then(async () => {
       })
     })
 
+    autoUpdater.on('update-not-available', (info) => {
+      updLog(`No update available, latest: ${info.version}`)
+      win.webContents.send('update-status', { type: 'not-available' })
+    })
+
     autoUpdater.on('download-progress', (p) => {
       const pct = Math.round(p.percent)
+      updLog(`Downloading: ${pct}%`)
       win.setProgressBar(p.percent / 100)
       win.setTitle(`Remote Access — скачивание обновления ${pct}%`)
     })
@@ -120,6 +145,8 @@ app.whenReady().then(async () => {
     autoUpdater.on('update-downloaded', (info) => {
       win.setProgressBar(-1)
       win.setTitle('Remote Access')
+      updLog(`Update downloaded: ${info.version}`)
+      win.webContents.send('update-status', { type: 'downloaded', version: info.version })
       dialog.showMessageBox(win, {
         type: 'info',
         title: 'Обновление готово',
@@ -134,20 +161,47 @@ app.whenReady().then(async () => {
     autoUpdater.on('error', (err) => {
       win.setProgressBar(-1)
       win.setTitle('Remote Access')
-      console.error('Auto-update error:', err.message)
+      updLog(`Error: ${err.message}`)
+      win.webContents.send('update-status', { type: 'error', message: err.message })
       dialog.showMessageBox(win, {
         type: 'warning',
         title: 'Ошибка обновления',
-        message: 'Не удалось скачать обновление автоматически.',
-        detail: `Скачай вручную: github.com/higroupkz-bot/remote-access/releases/latest\n\nОшибка: ${err.message}`,
+        message: 'Не удалось проверить или скачать обновление.',
+        detail: `Скачай вручную:\ngithub.com/higroupkz-bot/remote-access/releases/latest\n\nОшибка: ${err.message}`,
         buttons: ['OK']
       })
     })
 
+    const runCheck = () => {
+      updLog('Running checkForUpdates...')
+      autoUpdater.checkForUpdates().catch(err => {
+        updLog(`checkForUpdates rejected: ${err.message}`)
+      })
+    }
+
     // Проверять при запуске и каждые 4 часа
-    autoUpdater.checkForUpdates().catch(() => {})
-    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000)
+    runCheck()
+    setInterval(runCheck, 4 * 60 * 60 * 1000)
   }
+
+  // IPC: ручная проверка обновлений
+  ipcMain.handle('check-for-updates', () => {
+    if (process.env['ELECTRON_RENDERER_URL']) return 'dev-mode'
+    updLog('Manual check requested')
+    autoUpdater.checkForUpdates().catch(err => {
+      updLog(`Manual check failed: ${err.message}`)
+    })
+    return 'checking'
+  })
+
+  // IPC: прочитать лог обновлений
+  ipcMain.handle('get-update-log', () => {
+    try {
+      if (!_logPath) _logPath = join(app.getPath('userData'), 'updater.log')
+      const { readFileSync } = require('fs') as typeof import('fs')
+      return readFileSync(_logPath, 'utf8')
+    } catch { return '(лог пуст)' }
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

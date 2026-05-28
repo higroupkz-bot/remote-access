@@ -29,6 +29,9 @@ interface ElectronAPI {
   copyText: (text: string) => Promise<void>
   checkScreenPermission: () => Promise<string>
   openScreenPermission: () => Promise<void>
+  checkForUpdates: () => Promise<string>
+  getUpdateLog: () => Promise<string>
+  onUpdateStatus: (cb: (status: { type: string; version?: string; message?: string }) => void) => () => void
   platform: string
 }
 

@@ -57,6 +57,13 @@ contextBridge.exposeInMainWorld('api', {
   copyText: (text: string) => ipcRenderer.invoke('copy-text', text),
   checkScreenPermission: () => ipcRenderer.invoke('check-screen-permission'),
   openScreenPermission: () => ipcRenderer.invoke('open-screen-permission'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getUpdateLog: () => ipcRenderer.invoke('get-update-log'),
+  onUpdateStatus: (cb: (status: { type: string; version?: string; message?: string }) => void) => {
+    const handler = (_: unknown, s: { type: string; version?: string; message?: string }) => cb(s)
+    ipcRenderer.on('update-status', handler)
+    return () => ipcRenderer.removeListener('update-status', handler)
+  },
 
   // ── Platform info ────────────────────────────────────────
   platform: process.platform as string

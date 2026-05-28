@@ -13,9 +13,19 @@ export default function HomePage({ onNavigate }: Props) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [tab, setTab] = useState<'host' | 'connect'>('host')
   const [version, setVersion] = useState('')
+  const [updateMsg, setUpdateMsg] = useState('')
 
   useEffect(() => {
     window.api.getVersion().then(setVersion)
+    // Listen for update status events from main process
+    const unsub = window.api.onUpdateStatus((s) => {
+      if (s.type === 'checking') setUpdateMsg('Проверка обновлений...')
+      else if (s.type === 'available') setUpdateMsg(`Найдено обновление ${s.version}. Скачивается...`)
+      else if (s.type === 'downloaded') setUpdateMsg(`Версия ${s.version} готова. Перезапустите приложение.`)
+      else if (s.type === 'not-available') setUpdateMsg('')
+      else if (s.type === 'error') setUpdateMsg(`Ошибка обновления: ${s.message}`)
+    })
+    return unsub
   }, [])
 
   const handleConnect = () => {
@@ -138,9 +148,22 @@ export default function HomePage({ onNavigate }: Props) {
         </div>
       </div>
 
-      {/* Version badge at the bottom */}
-      <div className="pb-5 text-center">
-        <span className="text-xs text-neutral-500">{version ? `v${version}` : ''}</span>
+      {/* Version + update status */}
+      <div className="pb-5 text-center space-y-1">
+        {updateMsg && (
+          <p className="text-xs text-yellow-500/80 px-4">{updateMsg}</p>
+        )}
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-xs text-neutral-500">{version ? `v${version}` : ''}</span>
+          {version && (
+            <button
+              onClick={() => { setUpdateMsg('Проверка...'); window.api.checkForUpdates() }}
+              className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+            >
+              Проверить обновления
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

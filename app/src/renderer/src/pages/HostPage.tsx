@@ -23,6 +23,11 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
   const streamRef = useRef<MediaStream | null>(null)
   // Track active terminals (id on remote side → local pty id)
   const termMap = useRef<Map<string, string>>(new Map())
+  // Use ref so useEffect doesn't re-run when handleDataMsg changes
+  const handleDataMsgRef = useRef(handleDataMsg)
+
+  // Keep ref in sync so useEffect doesn't re-run on handleDataMsg change
+  useEffect(() => { handleDataMsgRef.current = handleDataMsg }, [handleDataMsg])
 
   // Check native module availability
   useEffect(() => {
@@ -158,7 +163,7 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
           streamRef.current = null
         },
         onError: e => setError(e),
-        onDataMessage: handleDataMsg
+        onDataMessage: (msg) => handleDataMsgRef.current(msg)
       })
       peerRef.current = peer
 
@@ -228,6 +233,8 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
         const msg = err instanceof Error ? err.message : String(err)
         setError(`Не удалось захватить экран: ${msg}`)
         setStatus('error')
+        // Notify viewer so it doesn't hang forever
+        sig.send({ type: 'host-error', message: msg })
         peer.close()
         peerRef.current = null
       }
@@ -249,7 +256,7 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
       sig.close()
       termMap.current.forEach((id) => window.api.terminalDestroy(id))
     }
-  }, [signalingUrl, handleDataMsg])
+  }, [signalingUrl]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const copyCode = () => {
     window.api.copyText(code)

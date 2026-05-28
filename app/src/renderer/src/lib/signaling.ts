@@ -8,6 +8,7 @@ export type SignalingMsg =
   | { type: 'answer'; sdp: RTCSessionDescriptionInit }
   | { type: 'ice-candidate'; candidate: RTCIceCandidateInit }
   | { type: 'pong' }
+  | { type: 'host-error'; message: string }
 
 type Listener<T extends SignalingMsg['type']> = (
   msg: Extract<SignalingMsg, { type: T }>

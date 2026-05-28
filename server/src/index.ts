@@ -108,7 +108,8 @@ wss.on('connection', (ws) => {
       // WebRTC signaling relay — forward to the other peer
       case 'offer':
       case 'answer':
-      case 'ice-candidate': {
+      case 'ice-candidate':
+      case 'host-error': {
         if (!sessionCode) return;
         const session = sessions.get(sessionCode);
         if (!session) return;

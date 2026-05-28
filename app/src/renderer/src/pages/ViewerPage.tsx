@@ -155,16 +155,30 @@ export default function ViewerPage({ code, signalingUrl, onExit }: Props) {
       setConnState('error')
     })
 
+    // Timeout: if no stream in 30s after joining, show error
+    let streamTimeout: ReturnType<typeof setTimeout> | null = null
+
     sig.on('joined', () => {
+      streamTimeout = setTimeout(() => {
+        if (connState !== 'active') {
+          setErrorMsg('Хост не отвечает — не удалось установить соединение')
+          setConnState('disconnected')
+        }
+      }, 30_000)
+
       const peer = new RemotePeer(sig, false, {
         onRemoteStream: (stream) => {
+          if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null }
           if (videoRef.current) {
             videoRef.current.srcObject = stream
             videoRef.current.play().catch(() => {})
           }
           setConnState('active')
         },
-        onConnected: () => setConnState('active'),
+        onConnected: () => {
+          if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null }
+          setConnState('active')
+        },
         onDisconnected: () => setConnState('disconnected'),
         onError: (e) => { setErrorMsg(e); setConnState('error') },
         onDataMessage: handleDataMsg
@@ -172,12 +186,20 @@ export default function ViewerPage({ code, signalingUrl, onExit }: Props) {
       peerRef.current = peer
     })
 
+    sig.on('host-error', ({ message }) => {
+      if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null }
+      setErrorMsg(`Ошибка на стороне хоста: ${message}`)
+      setConnState('disconnected')
+    })
+
     sig.on('disconnected', ({ reason }) => {
+      if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null }
       setErrorMsg(reason === 'host-left' ? 'Хост завершил сессию' : 'Соединение разорвано')
       setConnState('disconnected')
     })
 
     return () => {
+      if (streamTimeout) clearTimeout(streamTimeout)
       peerRef.current?.close()
       sig.close()
     }

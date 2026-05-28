@@ -23,11 +23,6 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
   const streamRef = useRef<MediaStream | null>(null)
   // Track active terminals (id on remote side → local pty id)
   const termMap = useRef<Map<string, string>>(new Map())
-  // Use ref so useEffect doesn't re-run when handleDataMsg changes
-  const handleDataMsgRef = useRef(handleDataMsg)
-
-  // Keep ref in sync so useEffect doesn't re-run on handleDataMsg change
-  useEffect(() => { handleDataMsgRef.current = handleDataMsg }, [handleDataMsg])
 
   // Check native module availability
   useEffect(() => {
@@ -122,6 +117,10 @@ export default function HostPage({ signalingUrl, onExit }: Props) {
       }
     }
   }, [termOk])
+
+  // Ref so the main useEffect doesn't re-run when handleDataMsg changes
+  const handleDataMsgRef = useRef(handleDataMsg)
+  useEffect(() => { handleDataMsgRef.current = handleDataMsg }, [handleDataMsg])
 
   useEffect(() => {
     const httpUrl = signalingUrl.replace(/^ws/, 'http')
